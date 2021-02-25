@@ -18,12 +18,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -66,6 +61,7 @@ public class BootstrapTranslationServiceImpl extends AbstractTranslationService 
     private Boolean isPreviewEnabled = false;
     private Boolean isPseudoLocalizationDisabled = false;
     private String exportFormat = BootstrapConstants.EXPORT_FORMAT_XML;
+    private Map<String, String> availableLanguageMap;
     private BootstrapTmsService bootstrapTmsService;
     private final static String BOOTSTRAP_SERVICE = "bootstrap-service";
 
@@ -132,6 +128,7 @@ public class BootstrapTranslationServiceImpl extends AbstractTranslationService 
         log.trace("isPreviewEnabled: {}",isPreviewEnabled);
         log.trace("isPseudoLocalizationDisabled: {}", isPseudoLocalizationDisabled);
         log.trace("exportFormat: {}",exportFormat);
+        log.trace("availableLanguageMap: {}",availableLanguageMap);
         this.dummyConfigId = dummyConfigId;
         this.dummyServerUrl = dummyServerUrl;
         this.previewPath = previewPath;
@@ -139,6 +136,7 @@ public class BootstrapTranslationServiceImpl extends AbstractTranslationService 
         this.isPseudoLocalizationDisabled = isPseudoLocalizationDisabled;
         this.isPreviewEnabled = isPreviewEnabled;
         this.exportFormat=exportFormat;
+        this.availableLanguageMap=availableLanguageMap;
     }
 
     @Override
@@ -231,7 +229,7 @@ public class BootstrapTranslationServiceImpl extends AbstractTranslationService 
         String strTargetLanguage, Date dueDate, TranslationState state, TranslationMetadata jobMetadata)
         throws TranslationException {
         log.trace("BootstrapTranslationServiceImpl.createTranslationJob");
-        return bootstrapTmsService.createBootstrapTmsJob(name, strSourceLanguage, strTargetLanguage, dueDate);
+        return bootstrapTmsService.createBootstrapTmsJob(name, getLanguageCode(strSourceLanguage), getLanguageCode(strTargetLanguage), dueDate);
     }
 
     @Override
@@ -454,5 +452,9 @@ public class BootstrapTranslationServiceImpl extends AbstractTranslationService 
 		}
 		zipInputStream.close();
 	}
+
+	private String getLanguageCode(String language) {
+        return Optional.ofNullable(availableLanguageMap.get(language)).orElse(language);
+    }
     
 }
