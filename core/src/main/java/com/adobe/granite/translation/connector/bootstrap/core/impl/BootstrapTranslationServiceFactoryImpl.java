@@ -15,6 +15,11 @@ package com.adobe.granite.translation.connector.bootstrap.core.impl;
 
 import java.util.*;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.sling.api.resource.LoginException;
+import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.osgi.framework.Constants;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -41,6 +46,9 @@ import com.adobe.granite.translation.core.TranslationCloudConfigUtil;
 @Designate(ocd=BootstrapServiceConfiguration.class)
 public class BootstrapTranslationServiceFactoryImpl implements TranslationServiceFactory {
 
+	private final static String BOOTSTRAP_SERVICE = "bootstrap-service";
+	private final static String LANGUAGE_MAPPING = "languageMapping";
+
 	protected String factoryName;
 
 	protected Boolean isPreviewEnabled;
@@ -48,6 +56,11 @@ public class BootstrapTranslationServiceFactoryImpl implements TranslationServic
 	protected Boolean isPseudoLocalizationDisabled;
 
 	protected String exportFormat;
+
+	protected String languageListPath;
+
+	@Reference
+	ResourceResolverFactory resourceResolverFactory;
 
 	@Reference
 	TranslationCloudConfigUtil cloudConfigUtil;
@@ -107,18 +120,40 @@ public class BootstrapTranslationServiceFactoryImpl implements TranslationServic
 			}
 		}
 
-		Map<String, String> availableLanguageMap = new HashMap<String, String>();
 		Map<String, String> availableCategoryMap = new HashMap<String, String>();
-		return new BootstrapTranslationServiceImpl(availableLanguageMap, availableCategoryMap, factoryName,
+		return new BootstrapTranslationServiceImpl(getAvailableLanguageMap(), availableCategoryMap, factoryName,
 				isPreviewEnabled, isPseudoLocalizationDisabled, exportFormat, dummyConfigId, dummyServerUrl,
 				previewPath, translationConfig, bootstrapTmsService);
 	}
 
-	public Map<String, String> supportedLanguages() {
-		log.trace("BootstrapTranslationServiceImpl.supportedLanguages");
+	private Map<String, String> getAvailableLanguageMap() {
+		log.trace("BootstrapTranslationServiceFactoryImpl.getAvailableLanguageMap");
 
+		Map<String, String> availableLanguageMap = new HashMap<String, String>();
 
-		return null;
+		if (StringUtils.isNotBlank(languageListPath)) {
+			final Map<String, Object> authInfo = Collections.singletonMap(
+					ResourceResolverFactory.SUBSERVICE, BOOTSTRAP_SERVICE);
+
+			try (ResourceResolver serviceResolver = resourceResolverFactory.getServiceResourceResolver(authInfo)) {
+				Resource languageMapping = serviceResolver.getResource(languageListPath);
+
+				if (languageMapping == null) {
+					return availableLanguageMap;
+				}
+
+				languageMapping.listChildren().forEachRemaining(language -> {
+					availableLanguageMap.put(language.getName(), language.getValueMap().get(LANGUAGE_MAPPING, String.class));
+				});
+
+			} catch (LoginException e) {
+				log.error(e.getLocalizedMessage(), e);
+			}
+		} else {
+			log.warn("There is no path to the list of languages in the 'Bootstrap Translation Service Configuration'");
+		}
+
+		return availableLanguageMap;
 	}
 
 	@Override
@@ -147,12 +182,15 @@ public class BootstrapTranslationServiceFactoryImpl implements TranslationServic
 
 		exportFormat = config.getExportFormat();
 
+		languageListPath = config.getLanguageListPath();
+
 		if (log.isTraceEnabled()) {
 			log.trace("Activated TSF with the following:");
 			log.trace("Factory Name: {}", factoryName);
 			log.trace("Preview Enabled: {}", isPreviewEnabled);
 			log.trace("Psuedo Localization Disabled: {}", isPseudoLocalizationDisabled);
 			log.trace("Export Format: {}", exportFormat);
+			log.trace("Path to the list of languages: {}", languageListPath);
 		}
 	}
 
