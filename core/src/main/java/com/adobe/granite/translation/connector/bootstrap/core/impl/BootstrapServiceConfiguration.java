@@ -1,7 +1,6 @@
 package com.adobe.granite.translation.connector.bootstrap.core.impl;
 
 import org.osgi.service.metatype.annotations.AttributeDefinition;
-import org.osgi.service.metatype.annotations.AttributeType;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.osgi.service.metatype.annotations.Option;
 
@@ -21,5 +20,7 @@ public @interface BootstrapServiceConfiguration {
 			@Option(label = "XLIFF 1.2", value = BootstrapConstants.EXPORT_FORMAT_XLIFF_1_2),
 			@Option(label = "XLIFF 2.0", value = BootstrapConstants.EXPORT_FORMAT_XLIFF_2_0)})
 	String getExportFormat() default BootstrapConstants.EXPORT_FORMAT_XML;
-	
+
+	@AttributeDefinition(name = "Path to the list of languages", description = "Path to the list of languages")
+	String getLanguageListPath() default "/apps/bootstrap-connector/config/translation/language-mapping";
 }
